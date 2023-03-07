@@ -63,86 +63,98 @@ startup()
 def gr_show(visible=True):
     return {"visible": visible, "__type__": "update"}
 
-class DetectionDetailerScript(scripts.Script):
+class Script(scripts.Script):
     def title(self):
-        return "Detection Detailer"
+        return "Detection Detailer lilly"
     
     def show(self, is_img2img):
+        print(f"{self.title()} show {is_img2img}")
         return True
 
     def ui(self, is_img2img):
+        print(f"{self.title()} ui {is_img2img}")
         import modules.ui
 
-        model_list = list_models(dd_models_path)
-        model_list.insert(0, "None")
-        if is_img2img:
-            info = gr.HTML("<p style=\"margin-bottom:0.75em\">Recommended settings: Use from inpaint tab, inpaint at full res ON, denoise <0.5</p>")
-        else:
-            info = gr.HTML("")
-        with gr.Group():
-            with gr.Row():
-                dd_model_a = gr.Dropdown(label="Primary detection model (A)", choices=model_list,value = "None", visible=True, type="value")
+        enabled = gr.Checkbox(value=False, label=f"{self.title()} apply")
+        accordion = gr.Group(visible=False)
+        enabled.change(
+            fn=lambda x: {"visible": x, "__type__": "update"},
+            inputs=[enabled],
+            outputs=[accordion],
+            show_progress = False)
             
-            with gr.Row():
-                dd_conf_a = gr.Slider(label='Detection confidence threshold % (A)', minimum=0, maximum=100, step=1, value=30, visible=False)
-                dd_dilation_factor_a = gr.Slider(label='Dilation factor (A)', minimum=0, maximum=255, step=1, value=4, visible=False)
+        with accordion:
 
-            with gr.Row():
-                dd_offset_x_a = gr.Slider(label='X offset (A)', minimum=-200, maximum=200, step=1, value=0, visible=False)
-                dd_offset_y_a = gr.Slider(label='Y offset (A)', minimum=-200, maximum=200, step=1, value=0, visible=False)
+            model_list = list_models(dd_models_path)
+            model_list.insert(0, "None")
+            if is_img2img:
+                info = gr.HTML("<p style=\"margin-bottom:0.75em\">Recommended settings: Use from inpaint tab, inpaint at full res ON, denoise <0.5</p>")
+            else:
+                info = gr.HTML("")
+            with gr.Group():
+                with gr.Row():
+                    dd_model_a = gr.Dropdown(label="Primary detection model (A)", choices=model_list,value = "None", visible=True, type="value")
+                
+                with gr.Row():
+                    dd_conf_a = gr.Slider(label='Detection confidence threshold % (A)', minimum=0, maximum=100, step=1, value=30, visible=False)
+                    dd_dilation_factor_a = gr.Slider(label='Dilation factor (A)', minimum=0, maximum=255, step=1, value=4, visible=False)
+
+                with gr.Row():
+                    dd_offset_x_a = gr.Slider(label='X offset (A)', minimum=-200, maximum=200, step=1, value=0, visible=False)
+                    dd_offset_y_a = gr.Slider(label='Y offset (A)', minimum=-200, maximum=200, step=1, value=0, visible=False)
+                
+                with gr.Row():
+                    dd_preprocess_b = gr.Checkbox(label='Inpaint model B detections before model A runs', value=False, visible=False)
+                    dd_bitwise_op = gr.Radio(label='Bitwise operation', choices=['None', 'A&B', 'A-B'], value="None", visible=False)  
             
-            with gr.Row():
-                dd_preprocess_b = gr.Checkbox(label='Inpaint model B detections before model A runs', value=False, visible=False)
-                dd_bitwise_op = gr.Radio(label='Bitwise operation', choices=['None', 'A&B', 'A-B'], value="None", visible=False)  
-        
-        br = gr.HTML("<br>")
+            br = gr.HTML("<br>")
 
-        with gr.Group():
-            with gr.Row():
-                dd_model_b = gr.Dropdown(label="Secondary detection model (B) (optional)", choices=model_list,value = "None", visible =False, type="value")
+            with gr.Group():
+                with gr.Row():
+                    dd_model_b = gr.Dropdown(label="Secondary detection model (B) (optional)", choices=model_list,value = "None", visible =False, type="value")
 
-            with gr.Row():
-                dd_conf_b = gr.Slider(label='Detection confidence threshold % (B)', minimum=0, maximum=100, step=1, value=30, visible=False)
-                dd_dilation_factor_b = gr.Slider(label='Dilation factor (B)', minimum=0, maximum=255, step=1, value=4, visible=False)
+                with gr.Row():
+                    dd_conf_b = gr.Slider(label='Detection confidence threshold % (B)', minimum=0, maximum=100, step=1, value=30, visible=False)
+                    dd_dilation_factor_b = gr.Slider(label='Dilation factor (B)', minimum=0, maximum=255, step=1, value=4, visible=False)
+                
+                with gr.Row():
+                    dd_offset_x_b = gr.Slider(label='X offset (B)', minimum=-200, maximum=200, step=1, value=0, visible=False)
+                    dd_offset_y_b = gr.Slider(label='Y offset (B)', minimum=-200, maximum=200, step=1, value=0, visible=False)
             
-            with gr.Row():
-                dd_offset_x_b = gr.Slider(label='X offset (B)', minimum=-200, maximum=200, step=1, value=0, visible=False)
-                dd_offset_y_b = gr.Slider(label='Y offset (B)', minimum=-200, maximum=200, step=1, value=0, visible=False)
-        
-        with gr.Group():
-            with gr.Row():
-                dd_mask_blur = gr.Slider(label='Mask blur ', minimum=0, maximum=64, step=1, value=4, visible=(not is_img2img))
-                dd_denoising_strength = gr.Slider(label='Denoising strength (Inpaint)', minimum=0.0, maximum=1.0, step=0.01, value=0.4, visible=(not is_img2img))
-            
-            with gr.Row():
-                dd_inpaint_full_res = gr.Checkbox(label='Inpaint at full resolution ', value=True, visible = (not is_img2img))
-                dd_inpaint_full_res_padding = gr.Slider(label='Inpaint at full resolution padding, pixels ', minimum=0, maximum=256, step=4, value=32, visible=(not is_img2img))
+            with gr.Group():
+                with gr.Row():
+                    dd_mask_blur = gr.Slider(label='Mask blur ', minimum=0, maximum=64, step=1, value=4, visible=(not is_img2img))
+                    dd_denoising_strength = gr.Slider(label='Denoising strength (Inpaint)', minimum=0.0, maximum=1.0, step=0.01, value=0.4, visible=(not is_img2img))
+                
+                with gr.Row():
+                    dd_inpaint_full_res = gr.Checkbox(label='Inpaint at full resolution ', value=True, visible = (not is_img2img))
+                    dd_inpaint_full_res_padding = gr.Slider(label='Inpaint at full resolution padding, pixels ', minimum=0, maximum=256, step=4, value=32, visible=(not is_img2img))
 
-        dd_model_a.change(
-            lambda modelname: {
-                dd_model_b:gr_show( modelname != "None" ),
-                dd_conf_a:gr_show( modelname != "None" ),
-                dd_dilation_factor_a:gr_show( modelname != "None"),
-                dd_offset_x_a:gr_show( modelname != "None" ),
-                dd_offset_y_a:gr_show( modelname != "None" )
+            dd_model_a.change(
+                lambda modelname: {
+                    dd_model_b:gr_show( modelname != "None" ),
+                    dd_conf_a:gr_show( modelname != "None" ),
+                    dd_dilation_factor_a:gr_show( modelname != "None"),
+                    dd_offset_x_a:gr_show( modelname != "None" ),
+                    dd_offset_y_a:gr_show( modelname != "None" )
 
-            },
-            inputs= [dd_model_a],
-            outputs =[dd_model_b, dd_conf_a, dd_dilation_factor_a, dd_offset_x_a, dd_offset_y_a]
-        )
+                },
+                inputs= [dd_model_a],
+                outputs =[dd_model_b, dd_conf_a, dd_dilation_factor_a, dd_offset_x_a, dd_offset_y_a]
+            )
 
-        dd_model_b.change(
-            lambda modelname: {
-                dd_preprocess_b:gr_show( modelname != "None" ),
-                dd_bitwise_op:gr_show( modelname != "None" ),
-                dd_conf_b:gr_show( modelname != "None" ),
-                dd_dilation_factor_b:gr_show( modelname != "None"),
-                dd_offset_x_b:gr_show( modelname != "None" ),
-                dd_offset_y_b:gr_show( modelname != "None" )
-            },
-            inputs= [dd_model_b],
-            outputs =[dd_preprocess_b, dd_bitwise_op, dd_conf_b, dd_dilation_factor_b, dd_offset_x_b, dd_offset_y_b]
-        )
+            dd_model_b.change(
+                lambda modelname: {
+                    dd_preprocess_b:gr_show( modelname != "None" ),
+                    dd_bitwise_op:gr_show( modelname != "None" ),
+                    dd_conf_b:gr_show( modelname != "None" ),
+                    dd_dilation_factor_b:gr_show( modelname != "None"),
+                    dd_offset_x_b:gr_show( modelname != "None" ),
+                    dd_offset_y_b:gr_show( modelname != "None" )
+                },
+                inputs= [dd_model_b],
+                outputs =[dd_preprocess_b, dd_bitwise_op, dd_conf_b, dd_dilation_factor_b, dd_offset_x_b, dd_offset_y_b]
+            )
         
         return [info,
                 dd_model_a, 
@@ -155,20 +167,48 @@ class DetectionDetailerScript(scripts.Script):
                 dd_offset_x_b, dd_offset_y_b,  
                 dd_mask_blur, dd_denoising_strength,
                 dd_inpaint_full_res, dd_inpaint_full_res_padding
+                ,enabled
         ]
 
-    def run(self, p, info,
-                     dd_model_a, 
-                     dd_conf_a, dd_dilation_factor_a,
-                     dd_offset_x_a, dd_offset_y_a,
-                     dd_preprocess_b, dd_bitwise_op, 
-                     br,
-                     dd_model_b,
-                     dd_conf_b, dd_dilation_factor_b,
-                     dd_offset_x_b, dd_offset_y_b,  
-                     dd_mask_blur, dd_denoising_strength,
-                     dd_inpaint_full_res, dd_inpaint_full_res_padding):
-
+    def process_batch(self, p, 
+            info,
+            dd_model_a, 
+            dd_conf_a, dd_dilation_factor_a,
+            dd_offset_x_a, dd_offset_y_a,
+            dd_preprocess_b, dd_bitwise_op, 
+            br,
+            dd_model_b,
+            dd_conf_b, dd_dilation_factor_b,
+            dd_offset_x_b, dd_offset_y_b,  
+            dd_mask_blur, dd_denoising_strength,
+            dd_inpaint_full_res, dd_inpaint_full_res_padding
+            ,enabled
+            , batch_number, prompts, seeds, subseeds
+            ):
+        print(f"{self.title()} process_batch")
+        if not enabled:
+            print(f"{self.title()} disabled - exiting")
+            return 
+            
+    def process(self, p, 
+            info,
+            dd_model_a, 
+            dd_conf_a, dd_dilation_factor_a,
+            dd_offset_x_a, dd_offset_y_a,
+            dd_preprocess_b, dd_bitwise_op, 
+            br,
+            dd_model_b,
+            dd_conf_b, dd_dilation_factor_b,
+            dd_offset_x_b, dd_offset_y_b,  
+            dd_mask_blur, dd_denoising_strength,
+            dd_inpaint_full_res, dd_inpaint_full_res_padding
+            ,enabled
+            ):
+        print(f"{self.title()} process")
+        if not enabled:
+            print(f"{self.title()} disabled - exiting")
+            return 
+            
         processing.fix_seed(p)
         initial_info = None
         seed = p.seed
@@ -329,9 +369,15 @@ class DetectionDetailerScript(scripts.Script):
             state.job = f"Generation {n + 1} out of {state.job_count}"
         if (initial_info is None):
             initial_info = "No detections found."
-
-        return Processed(p, output_images, seed, initial_info)
-
+        return
+        #return Processed(p, output_images, seed, initial_info)
+        
+        
+    def postprocess(self, *args):
+        print(f"{self.title()} postprocess")
+        return
+        
+        
 def modeldataset(model_shortname):
     path = modelpath(model_shortname)
     if ("mmdet" in path and "segm" in path):
