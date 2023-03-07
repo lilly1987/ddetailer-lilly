@@ -369,13 +369,13 @@ class Script(scripts.Script):
             state.job = f"Generation {n + 1} out of {state.job_count}"
         if (initial_info is None):
             initial_info = "No detections found."
-        return
-        #return Processed(p, output_images, seed, initial_info)
+        #return
+        return Processed(p, output_images, seed, initial_info)
         
         
-    def postprocess(self, *args):
-        print(f"{self.title()} postprocess")
-        return
+    #def postprocess(self, *args):
+    #    print(f"{self.title()} postprocess")
+    #    return
         
         
 def modeldataset(model_shortname):
