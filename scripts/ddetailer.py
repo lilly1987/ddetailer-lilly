@@ -170,25 +170,25 @@ class Script(scripts.Script):
                 ,enabled
         ]
 
-    def process_batch(self, p, 
-            info,
-            dd_model_a, 
-            dd_conf_a, dd_dilation_factor_a,
-            dd_offset_x_a, dd_offset_y_a,
-            dd_preprocess_b, dd_bitwise_op, 
-            br,
-            dd_model_b,
-            dd_conf_b, dd_dilation_factor_b,
-            dd_offset_x_b, dd_offset_y_b,  
-            dd_mask_blur, dd_denoising_strength,
-            dd_inpaint_full_res, dd_inpaint_full_res_padding
-            ,enabled
-            , batch_number, prompts, seeds, subseeds
-            ):
-        print(f"{self.title()} process_batch")
-        if not enabled:
-            print(f"{self.title()} disabled - exiting")
-            return 
+    #def process_batch(self, p, 
+    #        info,
+    #        dd_model_a, 
+    #        dd_conf_a, dd_dilation_factor_a,
+    #        dd_offset_x_a, dd_offset_y_a,
+    #        dd_preprocess_b, dd_bitwise_op, 
+    #        br,
+    #        dd_model_b,
+    #        dd_conf_b, dd_dilation_factor_b,
+    #        dd_offset_x_b, dd_offset_y_b,  
+    #        dd_mask_blur, dd_denoising_strength,
+    #        dd_inpaint_full_res, dd_inpaint_full_res_padding
+    #        ,enabled
+    #        , batch_number, prompts, seeds, subseeds
+    #        ):
+    #    print(f"{self.title()} process_batch")
+    #    if not enabled:
+    #        print(f"{self.title()} disabled - exiting")
+    #        return 
             
     def process(self, p, 
             info,
