@@ -224,7 +224,86 @@ class Script(scripts.Script):
         initial_info = None
         init_image=pp.image
         output_images = []
+        masks_a = []
+        masks_b_pre = []
         
+        is_txt2img = isinstance(p, StableDiffusionProcessingTxt2Img)
+        if (not is_txt2img):
+            orig_image = p.init_images[0]
+        else:
+            p_txt = p
+            p = StableDiffusionProcessingImg2Img(
+                    init_images = [init_image],
+                    resize_mode = 0,
+                    denoising_strength = dd_denoising_strength,
+                    mask = None,
+                    mask_blur= dd_mask_blur,
+                    inpainting_fill = 1,
+                    inpaint_full_res = dd_inpaint_full_res,
+                    inpaint_full_res_padding= dd_inpaint_full_res_padding,
+                    inpainting_mask_invert= 0,
+                    sd_model=p_txt.sd_model,
+                    outpath_samples=p_txt.outpath_samples,
+                    outpath_grids=p_txt.outpath_grids,
+                    prompt=p_txt.all_prompts[0],
+                    #all_prompts=p_txt.all_prompts,
+                    negative_prompt=p_txt.all_negative_prompts[0],
+                    #all_negative_prompts=p_txt.all_negative_prompts,
+                    styles=p_txt.styles,
+                    seed=p_txt.seed,
+                    subseed=p_txt.subseed,
+                    subseed_strength=p_txt.subseed_strength,
+                    seed_resize_from_h=p_txt.seed_resize_from_h,
+                    seed_resize_from_w=p_txt.seed_resize_from_w,
+                    sampler_name=p_txt.sampler_name,
+                    n_iter=p_txt.n_iter,
+                    steps=p_txt.steps,
+                    cfg_scale=p_txt.cfg_scale,
+                    width=p_txt.width,
+                    height=p_txt.height,
+                    tiling=p_txt.tiling,
+                )
+            #p.do_not_save_grid = True
+            #p.do_not_save_samples = True
+
+        devices.torch_gc()
+
+        # Optional secondary pre-processing run
+        if (dd_model_b != "None" and dd_preprocess_b): 
+            label_b_pre = "B"
+            results_b_pre = inference(init_image, dd_model_b, dd_conf_b/100.0, label_b_pre)
+            masks_b_pre = create_segmasks(results_b_pre)
+            masks_b_pre = dilate_masks(masks_b_pre, dd_dilation_factor_b, 1)
+            masks_b_pre = offset_masks(masks_b_pre,dd_offset_x_b, dd_offset_y_b)
+            if (len(masks_b_pre) > 0):
+                results_b_pre = update_result_masks(results_b_pre, masks_b_pre)
+                segmask_preview_b = create_segmask_preview(results_b_pre, init_image)
+                shared.state.current_image = segmask_preview_b
+                if ( opts.dd_save_previews):
+                    images.save_image(segmask_preview_b, opts.outdir_ddetailer_previews, "", start_seed, p.prompt, opts.samples_format, p=p)
+                gen_count = len(masks_b_pre)
+                state.job_count += gen_count
+                #print(f"Processing {gen_count} model {label_b_pre} detections for output generation {n + 1}.")
+                #p.seed = start_seed
+                #p.init_images = [init_image]
+
+                for i in range(gen_count):
+                    p.image_mask = masks_b_pre[i]
+                    if ( opts.dd_save_masks):
+                        images.save_image(masks_b_pre[i], opts.outdir_ddetailer_masks, "", start_seed, p.prompt, opts.samples_format, p=p)
+                    p = processing.process_images(p)
+                    #p.seed = processed.seed + 1
+                    p.init_images = processed.images
+
+                #if (gen_count > 0):
+                    #output_images[n] = processed.images[0]
+                    #init_image = processed.images[0]
+
+            else:
+                print(f"No model B detections for output generation {n} with current settings.")
+
+
+
         # Primary run
         if (dd_model_a != "None"):
             label_a = "A"
@@ -267,7 +346,7 @@ class Script(scripts.Script):
                 #state.job_count += gen_count
                 print(f"Processing {gen_count} model {label_a} detections for output generation.")
                 #p.seed = start_seed
-                p.init_images = [init_image]
+                #p.init_images = [init_image]
 
                 for i in range(gen_count):
                     p.image_mask = masks_a[i]
@@ -277,16 +356,20 @@ class Script(scripts.Script):
                     processed = processing.process_images(p)
                     if initial_info is None:
                         initial_info = processed.info
-                    p.seed = processed.seed + 1
-                    p.init_images = processed.images
-                
-                if (gen_count > 0):
+                    #p.seed = processed.seed + 1
+                    #print(f"{p.images}")
+                    print(f"{processed.images}")
+                    output_images=p.init_images = processed.images
+                    shared.state.current_image = processed.images[0]
+                    images.save_image(processed.images[0], p.outpath_samples, "", p.seed, p.prompt, opts.samples_format, info=initial_info, p=p)
+                    
+                #if (gen_count > 0):
                     #output_images[n] = processed.images[0]
                     #output_images.append(processed.images[0])
-                    
-                    if ( opts.samples_save ):
-                        images.save_image(processed.images[0], p.outpath_samples, "", p.seed, p.prompt, opts.samples_format, info=initial_info, p=p)
-                        p=Processed(p, processed.images, p.seed, initial_info)
+                    #p.images=processed.images
+                    #if ( opts.samples_save ):
+                    #    images.save_image(processed.images[0], p.outpath_samples, "", p.seed, p.prompt, opts.samples_format, info=initial_info, p=p)
+        
 
             else: 
                 print(f"No model {label_a} detections for output generation with current settings.")
@@ -294,6 +377,7 @@ class Script(scripts.Script):
         # -------------------------------------------------------------
         self.is_run=False
         print(f"{self.title()} postprocess_image is_run {self.is_run}")
+        return Processed(p, output_images, p.seed, initial_info)
         
 def modeldataset(model_shortname):
     path = modelpath(model_shortname)
