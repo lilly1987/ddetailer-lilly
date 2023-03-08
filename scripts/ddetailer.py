@@ -69,7 +69,7 @@ class Script(scripts.Script):
     
     def show(self, is_img2img):
         print(f"{self.title()} show {is_img2img}")
-        return True
+        return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
         print(f"{self.title()} ui {is_img2img}")
@@ -170,27 +170,31 @@ class Script(scripts.Script):
                 ,enabled
         ]
 
-    #def process_batch(self, p, 
-    #        info,
-    #        dd_model_a, 
-    #        dd_conf_a, dd_dilation_factor_a,
-    #        dd_offset_x_a, dd_offset_y_a,
-    #        dd_preprocess_b, dd_bitwise_op, 
-    #        br,
-    #        dd_model_b,
-    #        dd_conf_b, dd_dilation_factor_b,
-    #        dd_offset_x_b, dd_offset_y_b,  
-    #        dd_mask_blur, dd_denoising_strength,
-    #        dd_inpaint_full_res, dd_inpaint_full_res_padding
-    #        ,enabled
-    #        , batch_number, prompts, seeds, subseeds
-    #        ):
-    #    print(f"{self.title()} process_batch")
-    #    if not enabled:
-    #        print(f"{self.title()} disabled - exiting")
-    #        return 
-            
-    def process(self, p, 
+    is_run=False
+
+    def process(self, p,
+            info,
+            dd_model_a, 
+            dd_conf_a, dd_dilation_factor_a,
+            dd_offset_x_a, dd_offset_y_a,
+            dd_preprocess_b, dd_bitwise_op, 
+            br,
+            dd_model_b,
+            dd_conf_b, dd_dilation_factor_b,
+            dd_offset_x_b, dd_offset_y_b,  
+            dd_mask_blur, dd_denoising_strength,
+            dd_inpaint_full_res, dd_inpaint_full_res_padding
+            ,enabled
+    ):
+        """
+        This function is called before processing begins for AlwaysVisible scripts.
+        You can modify the processing object (p) here, inject hooks, etc.
+        args contains all values returned by components from ui()
+        """
+        print(f"{self.title()} process {enabled} {self.is_run}")
+        #pass
+        
+    def postprocess_image(self, p, pp,
             info,
             dd_model_a, 
             dd_conf_a, dd_dilation_factor_a,
@@ -204,9 +208,16 @@ class Script(scripts.Script):
             dd_inpaint_full_res, dd_inpaint_full_res_padding
             ,enabled
             ):
-        print(f"{self.title()} process")
+        print(f"{self.title()} postprocess_image")
+        
+        print(f"{self.title()} postprocess_image is_run {self.is_run}")
+        if self.is_run:
+            return 
+        self.is_run=True
+        print(f"{self.title()} postprocess_image is_run {self.is_run}")
+        
+        print(f"{self.title()} postprocess_image enabled {enabled}")
         if not enabled:
-            print(f"{self.title()} disabled - exiting")
             return 
             
         processing.fix_seed(p)
@@ -218,6 +229,9 @@ class Script(scripts.Script):
         p.do_not_save_grid = True
         p.do_not_save_samples = True
         is_txt2img = isinstance(p, StableDiffusionProcessingTxt2Img)
+        
+        init_image = pp
+        
         if (not is_txt2img):
             orig_image = p.init_images[0]
         else:
@@ -236,7 +250,9 @@ class Script(scripts.Script):
                     outpath_samples=p_txt.outpath_samples,
                     outpath_grids=p_txt.outpath_grids,
                     prompt=p_txt.prompt,
+                    all_prompts=p_txt.all_prompts,
                     negative_prompt=p_txt.negative_prompt,
+                    all_negative_prompts=p_txt.all_negative_prompts,
                     styles=p_txt.styles,
                     seed=p_txt.seed,
                     subseed=p_txt.subseed,
@@ -253,16 +269,19 @@ class Script(scripts.Script):
                 )
             p.do_not_save_grid = True
             p.do_not_save_samples = True
+            
         output_images = []
         state.job_count = ddetail_count
+        
         for n in range(ddetail_count):
             devices.torch_gc()
             start_seed = seed + n
             if ( is_txt2img ):
                 print(f"Processing initial image for output generation {n + 1}.")
                 p_txt.seed = start_seed
-                processed = processing.process_images(p_txt)
-                init_image = processed.images[0]   
+                #processed = processing.process_images(p_txt) # Processed
+                #init_image = processed.images[0]   
+                init_image = p_txt.images[0]   
             else: 
                 init_image = orig_image
             
@@ -369,14 +388,10 @@ class Script(scripts.Script):
             state.job = f"Generation {n + 1} out of {state.job_count}"
         if (initial_info is None):
             initial_info = "No detections found."
-        #return
-        return Processed(p, output_images, seed, initial_info)
+
         
-        
-    #def postprocess(self, *args):
-    #    print(f"{self.title()} postprocess")
-    #    return
-        
+        self.is_run=False
+        print(f"{self.title()} postprocess_image is_run {self.is_run}")
         
 def modeldataset(model_shortname):
     path = modelpath(model_shortname)
